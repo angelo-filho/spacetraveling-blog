@@ -32,18 +32,13 @@ interface PostProps {
 }
 
 export default function Post({ post }: PostProps) {
-  const [readingTime, setReadingTime] = useState<number | null>();
   const { isFallback } = useRouter();
 
-  useEffect(() => {
-    const allLetters = post.data.content.reduce((a, b) => {
-      return a + b.heading.split(' ').length + asText(b.body).split(' ').length;
-    }, 0);
+  const allLetters = post.data.content.reduce((a, b) => {
+    return a + b.heading.split(' ').length + asText(b.body).split(' ').length;
+  }, 0);
 
-    console.log(allLetters);
-
-    setReadingTime(Math.ceil(allLetters / 200));
-  }, []);
+  const readingTime = Math.ceil(allLetters / 200);
 
   if (isFallback) {
     return <p>Carregando...</p>;
@@ -61,7 +56,7 @@ export default function Post({ post }: PostProps) {
           <div>
             <time>
               <FiCalendar size={'1.25rem'} />
-              {post.first_publication_date}
+              {formatDate(post.first_publication_date)}
             </time>
             <span>
               <FiUser size={'1.25rem'} />
@@ -97,7 +92,11 @@ export const getStaticPaths: GetStaticPaths = async () => {
   const posts = await prismic.getByType('posts');
 
   const postsPaths = posts.results.map(post => {
-    return `/post/${post.uid}`;
+    return {
+      params: {
+        slug: post.uid,
+      },
+    };
   });
 
   return {
@@ -113,15 +112,7 @@ export const getStaticProps: GetStaticProps = async ({ params }) => {
 
   const response = await prismic.getByUID('posts', String(slug));
 
-  const post: Post = {
-    first_publication_date: formatDate(response.first_publication_date),
-    data: {
-      banner: response.data.banner,
-      title: response.data.title,
-      author: response.data.author,
-      content: response.data.content,
-    },
-  };
+  const post = response as unknown as Post;
 
   return {
     props: { post },
